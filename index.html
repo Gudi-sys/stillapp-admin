@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>StillApp Admin</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; overflow: hidden; }
+
+:root {
+  --bg:      #1c1c1e;
+  --card:    #2c2c2e;
+  --card2:   #3a3a3c;
+  --blue:    #0a84ff;
+  --green:   #30d158;
+  --red:     #ff453a;
+  --amber:   #ffd60a;
+  --purple:  #bf5af2;
+  --teal:    #5ac8fa;
+  --text:    #ffffff;
+  --muted:   #8e8e93;
+  --border:  rgba(255,255,255,0.08);
+  --radius:  12px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── SCREENS ── */
+.screen {
+  display: none;
+  flex-direction: column;
+  height: 100%;
+  animation: fadeIn 0.18s ease;
+}
+.screen.active { display: flex; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── HEADER ── */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 10px;
+  flex-shrink: 0;
+  border-bottom: 0.5px solid var(--border);
+}
+.back-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--card);
+  border: none;
+  color: var(--blue);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.header-title { font-size: 17px; font-weight: 600; flex: 1; }
+.header-action {
+  padding: 7px 14px;
+  background: var(--blue);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer;
+}
+
+/* ── SCROLL ── */
+.scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 12px 20px;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll::-webkit-scrollbar { display: none; }
+
+/* ── SECTION LABEL ── */
+.label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 16px 4px 6px;
+}
+
+/* ── STAT GRID ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.stat-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.stat-lbl  { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.stat-val  { font-size: 22px; font-weight: 600; }
+.stat-delta { font-size: 12px; margin-top: 2px; color: var(--green); }
+.stat-delta.neg { color: var(--red); }
+
+/* ── CARD GROUP (list) ── */
+.card-group {
+  background: var(--card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.list-item {
+  display: flex;
+  align-items: center;
+  padding: 13px 16px;
+  gap: 14px;
+  cursor: pointer;
+  border-bottom: 0.5px solid var(--border);
+  transition: background 0.1s;
+}
+.list-item:last-child { border-bottom: none; }
+.list-item:active { background: rgba(255,255,255,0.05); }
+
+.item-icon {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+}
+.i-blue   { background: rgba(10,132,255,.2);  color: var(--blue); }
+.i-green  { background: rgba(48,209,88,.2);   color: var(--green); }
+.i-amber  { background: rgba(255,214,10,.2);  color: var(--amber); }
+.i-red    { background: rgba(255,69,58,.2);   color: var(--red); }
+.i-purple { background: rgba(191,90,242,.2);  color: var(--purple); }
+.i-teal   { background: rgba(90,200,250,.2);  color: var(--teal); }
+
+.item-body  { flex: 1; min-width: 0; }
+.item-title { font-size: 15px; font-weight: 500; }
+.item-sub   { font-size: 13px; color: var(--muted); margin-top: 1px; }
+
+.item-badge {
+  font-size: 12px; min-width: 20px; height: 20px;
+  border-radius: 10px; padding: 0 6px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 600;
+  background: var(--red); color: #fff;
+}
+.badge-green  { background: var(--green); color: #1c1c1e; }
+.badge-blue   { background: var(--blue); }
+.badge-muted  { background: var(--card2); color: var(--muted); }
+
+.chevron { color: var(--muted); font-size: 13px; }
+
+/* ── BIG STAT CARD ── */
+.big-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 4px;
+}
+.big-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+}
+.big-lbl { font-size: 14px; color: var(--muted); }
+.big-val  { font-size: 15px; font-weight: 600; }
+
+/* ── BAR ── */
+.bar-row   { display: flex; align-items: center; gap: 10px; padding: 5px 0; }
+.bar-label { font-size: 13px; color: var(--muted); width: 24px; }
+.bar-track { flex: 1; height: 6px; background: var(--card2); border-radius: 3px; overflow: hidden; }
+.bar-fill  { height: 100%; border-radius: 3px; }
+.bar-num   { font-size: 13px; width: 30px; text-align: right; }
+
+/* ── AVATAR ── */
+.avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 15px; font-weight: 600; flex-shrink: 0;
+}
+.av-blue   { background: var(--blue); color: #fff; }
+.av-purple { background: var(--purple); color: #fff; }
+.av-amber  { background: var(--amber); color: #1c1c1e; }
+.av-red    { background: var(--red); color: #fff; }
+.av-green  { background: var(--green); color: #1c1c1e; }
+
+/* ── USER DETAIL ── */
+.user-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 10px;
+}
+.user-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.user-av {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700; flex-shrink: 0;
+}
+.u-name   { font-size: 17px; font-weight: 600; }
+.u-handle { font-size: 13px; color: var(--muted); margin-top: 1px; }
+.u-status {
+  margin-left: auto;
+  font-size: 12px; padding: 4px 10px;
+  border-radius: 20px; font-weight: 500;
+  flex-shrink: 0;
+}
+.s-active { background: rgba(48,209,88,.18);  color: var(--green); }
+.s-banned { background: rgba(255,69,58,.18);  color: var(--red); }
+
+.user-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.u-stat     { text-align: center; }
+.u-stat-val { font-size: 20px; font-weight: 600; }
+.u-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+.divider { height: 0.5px; background: var(--border); margin: 0 0 12px; }
+
+/* ── BUTTONS ── */
+.btn-row { display: flex; gap: 8px; margin-bottom: 10px; }
+.btn {
+  flex: 1; padding: 12px;
+  border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: opacity 0.12s;
+  display: flex; align-items: center;
+  justify-content: center; gap: 6px;
+}
+.btn:active { opacity: 0.7; }
+.btn-blue   { background: var(--blue);  color: #fff; }
+.btn-red    { background: rgba(255,69,58,.18);  color: var(--red); }
+.btn-green  { background: rgba(48,209,88,.18);  color: var(--green); }
+.btn-ghost  { background: var(--card2); color: var(--text); }
+.btn-full   { width: 100%; padding: 14px; font-size: 16px; border-radius: 10px; }
+
+/* ── COINS ── */
+.coins-row {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 6px;
+  margin-bottom: 10px;
+}
+.coins-step {
+  width: 42px; height: 42px;
+  background: var(--card2); border: none;
+  border-radius: 8px; color: var(--text);
+  font-size: 22px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.coins-display {
+  flex: 1; text-align: center;
+  font-size: 26px; font-weight: 700;
+  color: var(--amber);
+}
+.presets { display: flex; gap: 8px; margin-bottom: 10px; }
+.preset {
+  flex: 1; padding: 10px 4px;
+  background: var(--card); border: none;
+  border-radius: 8px; color: var(--text);
+  font-size: 13px; font-weight: 500;
+  cursor: pointer;
+}
+.preset:active { opacity: 0.7; }
+
+/* ── UPLOAD ── */
+.upload-zone {
+  border: 1.5px dashed var(--blue);
+  border-radius: var(--radius);
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.upload-zone:active { background: rgba(10,132,255,.06); }
+.upload-icon  { font-size: 36px; margin-bottom: 8px; }
+.upload-title { font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+.upload-sub   { font-size: 13px; color: var(--muted); }
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.photo-thumb {
+  background: var(--card2);
+  border-radius: 10px;
+  aspect-ratio: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+.photo-emoji { font-size: 40px; }
+.photo-meta {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(0,0,0,.6);
+  padding: 6px 8px;
+  font-size: 11px; color: rgba(255,255,255,.85);
+}
+
+/* ── INPUT ── */
+.input-group { margin-bottom: 10px; }
+.input-label { font-size: 13px; color: var(--muted); padding: 0 4px 6px; display: block; }
+.tg-input {
+  width: 100%;
+  background: var(--card);
+  border: 0.5px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  padding: 12px 14px;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+.tg-input:focus { border-color: var(--blue); }
+
+/* ── PROMOS ── */
+.promo-item {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 13px 16px;
+  border-bottom: 0.5px solid var(--border);
+}
+.promo-item:last-child { border-bottom: none; }
+.promo-code { font-size: 15px; font-weight: 700; font-family: monospace; letter-spacing: 0.5px; }
+.promo-info { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.promo-disc { font-size: 17px; font-weight: 700; color: var(--green); }
+.promo-uses { font-size: 12px; color: var(--muted); text-align: right; }
+
+/* ── LOGS ── */
+.log-item {
+  display: flex; align-items: flex-start;
+  gap: 12px; padding: 11px 16px;
+  border-bottom: 0.5px solid var(--border);
+}
+.log-item:last-child { border-bottom: none; }
+.log-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.log-body { flex: 1; }
+.log-action { font-size: 14px; font-weight: 500; }
+.log-detail { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.log-time   { font-size: 12px; color: var(--muted); }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed;
+  bottom: 24px; left: 50%;
+  transform: translateX(-50%);
+  background: rgba(48,209,88,.92);
+  color: #fff;
+  padding: 10px 22px;
+  border-radius: 20px;
+  font-size: 14px; font-weight: 500;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+  z-index: 999;
+}
+.toast.show { opacity: 1; }
+.toast.err  { background: rgba(255,69,58,.92); }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: HOME
+════════════════════════════════════════════ -->
+<div class="screen active" id="s-home">
+  <div class="header" style="border-bottom:none; padding-top:20px;">
+    <div>
+      <div style="font-size:20px;font-weight:700;">StillApp Admin</div>
+      <div style="font-size:13px;color:var(--muted);">Панель управления</div>
+    </div>
+    <span style="margin-left:auto;font-size:12px;padding:3px 10px;background:rgba(10,132,255,.18);color:var(--blue);border-radius:20px;font-weight:500;">Admin</span>
+  </div>
+
+  <div class="scroll">
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-lbl">Пользователи</div>
+        <div class="stat-val" style="color:var(--blue);" id="h-users">2 418</div>
+        <div class="stat-delta">+34 сегодня</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">StillCoin</div>
+        <div class="stat-val" style="color:var(--amber);">891K</div>
+        <div class="stat-delta">в обороте</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Продажи</div>
+        <div class="stat-val" style="color:var(--green);">1 247</div>
+        <div class="stat-delta">+12 сегодня</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-lbl">Забанено</div>
+        <div class="stat-val" style="color:var(--red);" id="h-banned">7</div>
+        <div class="stat-delta neg">активных банов</div>
+      </div>
+    </div>
+
+    <div class="label">Разделы</div>
+    <div class="card-group">
+      <div class="list-item" onclick="go('stats')">
+        <div class="item-icon i-blue"><i class="ti ti-chart-bar" aria-hidden="true"></i></div>
+        <div class="item-body">
+          <div class="item-title">Статистика</div>
+          <div class="item-sub">Метрики, активность, оборот</div>
+        </div>
+        <div class="chevron"><i class="ti ti-chevron-right" aria-hidden="true"></i></div>
+      </div>
+      <div class="list-item" onclick="go('users')">
+        <div class="item-icon i-teal"><i class="ti ti-users" aria-hidden="true"></i></div>
+        <div class="item-body">
+          <div class="item-title">Пользователи</div>
+          <div class="item-sub">Управление аккаунтами</div>
+        </div>
+        <div class="item-badge badge-blue" style="margin-right:6px;">2418</div>
+        <div class="chevron"><i class="ti ti-chevron-right" aria-hidden="true"></i></div>
+      </div>
+      <div class="list-item" onclick="go('upload')">
+        <div class="item-icon i-purple"><i class="ti ti-photo" aria-hidden="true"></i></div>
+        <div class="item-body">
+          <div class="item-title">Контент</div>
+          <div class="item-sub">Загрузка фото и листинги</div>
+        </div>
+        <div class="chevron"><i class="ti ti-chevron-right" aria-hidden="true"></i></div>
+      </div>
+      <div class="list-item" onclick="go('promos')">
+        <div class="item-icon i-amber"><i class="ti ti-ticket" aria-hidden="true"></i></div>
+        <div class="item-body">
+          <div class="item-title">Промокоды</div>
+          <div class="item-sub">Скидки и акции</div>
+        </div>
+        <div class="item-badge badge-green" style="margin-right:6px;" id="h-promo-cnt">4</div>
+        <div class="chevron"><i class="ti ti-chevron-right" aria-hidden="true"></i></div>
+      </div>
+      <div class="list-item" onclick="go('logs')">
+        <div class="item-icon i-red"><i class="ti ti-list" aria-hidden="true"></i></div>
+        <div class="item-body">
+          <div class="item-title">Логи событий</div>
+          <div class="item-sub">Последние действия</div>
+        </div>
+        <div class="chevron"><i class="ti ti-chevron-right" aria-hidden="true"></i></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: STATS
+════════════════════════════════════════════ -->
+<div class="screen" id="s-stats">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title">Статистика</span>
+  </div>
+  <div class="scroll">
+    <div class="label">Пользователи</div>
+    <div class="big-card">
+      <div class="big-row"><span class="big-lbl">Всего</span><span class="big-val">2 418</span></div>
+      <div class="big-row"><span class="big-lbl">Активных (7д)</span><span class="big-val" style="color:var(--green);">1 204</span></div>
+      <div class="big-row"><span class="big-lbl">Новых сегодня</span><span class="big-val" style="color:var(--blue);">+34</span></div>
+      <div class="big-row"><span class="big-lbl">Забанено</span><span class="big-val" style="color:var(--red);">7</span></div>
+    </div>
+
+    <div class="label">StillCoin</div>
+    <div class="big-card">
+      <div class="big-row"><span class="big-lbl">В обороте</span><span class="big-val" style="color:var(--amber);">891 240 SC</span></div>
+      <div class="big-row"><span class="big-lbl">Средний баланс</span><span class="big-val">368 SC</span></div>
+      <div class="big-row"><span class="big-lbl">Макс. баланс</span><span class="big-val">12 500 SC</span></div>
+    </div>
+
+    <div class="label">Продажи</div>
+    <div class="big-card">
+      <div class="big-row"><span class="big-lbl">Всего транзакций</span><span class="big-val">1 247</span></div>
+      <div class="big-row"><span class="big-lbl">Сегодня</span><span class="big-val" style="color:var(--green);">+12</span></div>
+      <div class="big-row"><span class="big-lbl">Оборот</span><span class="big-val">348 900 SC</span></div>
+      <div class="big-row"><span class="big-lbl">Фото загружено</span><span class="big-val">38</span></div>
+    </div>
+
+    <div class="label">Активность по дням</div>
+    <div class="big-card">
+      <div class="bar-row"><span class="bar-label">Пн</span><div class="bar-track"><div class="bar-fill" style="width:70%;background:var(--blue);"></div></div><span class="bar-num">211</span></div>
+      <div class="bar-row"><span class="bar-label">Вт</span><div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--blue);"></div></div><span class="bar-num">256</span></div>
+      <div class="bar-row"><span class="bar-label">Ср</span><div class="bar-track"><div class="bar-fill" style="width:60%;background:var(--blue);"></div></div><span class="bar-num">181</span></div>
+      <div class="bar-row"><span class="bar-label">Чт</span><div class="bar-track"><div class="bar-fill" style="width:92%;background:var(--blue);"></div></div><span class="bar-num">278</span></div>
+      <div class="bar-row"><span class="bar-label">Пт</span><div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--amber);"></div></div><span class="bar-num">301</span></div>
+      <div class="bar-row"><span class="bar-label">Сб</span><div class="bar-track"><div class="bar-fill" style="width:75%;background:var(--blue);"></div></div><span class="bar-num">226</span></div>
+      <div class="bar-row"><span class="bar-label">Вс</span><div class="bar-track"><div class="bar-fill" style="width:55%;background:var(--blue);"></div></div><span class="bar-num">165</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: USERS
+════════════════════════════════════════════ -->
+<div class="screen" id="s-users">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title">Пользователи</span>
+  </div>
+  <div class="scroll">
+    <div class="card-group" id="users-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: USER DETAIL
+════════════════════════════════════════════ -->
+<div class="screen" id="s-userdetail">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title" id="ud-title">Профиль</span>
+  </div>
+  <div class="scroll" id="ud-body"></div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: COINS
+════════════════════════════════════════════ -->
+<div class="screen" id="s-coins">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title">Начислить SC</span>
+  </div>
+  <div class="scroll">
+    <div class="label" id="coins-for"></div>
+    <div class="card-group" style="margin-bottom:14px;">
+      <div class="list-item" style="cursor:default;">
+        <div class="item-icon i-amber"><i class="ti ti-coin" aria-hidden="true"></i></div>
+        <div class="item-body">
+          <div class="item-title">Текущий баланс</div>
+          <div class="item-sub" id="coins-bal">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="label">Сумма</div>
+    <div class="coins-row">
+      <button class="coins-step" onclick="adjCoins(-50)" aria-label="Уменьшить">−</button>
+      <div class="coins-display" id="coins-disp">+100</div>
+      <button class="coins-step" onclick="adjCoins(+50)" aria-label="Увеличить">+</button>
+    </div>
+    <div class="presets">
+      <button class="preset" onclick="setCoins(-500)">−500</button>
+      <button class="preset" onclick="setCoins(-100)">−100</button>
+      <button class="preset" onclick="setCoins(+100)">+100</button>
+      <button class="preset" onclick="setCoins(+500)">+500</button>
+    </div>
+    <button class="btn btn-blue btn-full" onclick="applyCoins()">Начислить</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: UPLOAD
+════════════════════════════════════════════ -->
+<div class="screen" id="s-upload">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title">Контент</span>
+  </div>
+  <div class="scroll">
+    <div class="upload-zone" onclick="doUpload()">
+      <div class="upload-icon" id="uz-icon">📤</div>
+      <div class="upload-title" id="uz-title">Загрузить фото</div>
+      <div class="upload-sub" id="uz-sub">Нажми чтобы выбрать</div>
+    </div>
+
+    <div class="input-group">
+      <label class="input-label" for="ph-caption">Название / подпись</label>
+      <input class="tg-input" id="ph-caption" placeholder="Название контента..." type="text">
+    </div>
+    <div class="input-group">
+      <label class="input-label" for="ph-price">Цена в SC</label>
+      <input class="tg-input" id="ph-price" placeholder="100" type="number" inputmode="numeric">
+    </div>
+
+    <div class="label">Загружено</div>
+    <div class="photo-grid" id="photo-grid"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: PROMOS
+════════════════════════════════════════════ -->
+<div class="screen" id="s-promos">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title">Промокоды</span>
+    <button class="header-action" onclick="go('addpromo')">+ Новый</button>
+  </div>
+  <div class="scroll">
+    <div class="card-group" id="promos-list"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: ADD PROMO
+════════════════════════════════════════════ -->
+<div class="screen" id="s-addpromo">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title">Новый промокод</span>
+  </div>
+  <div class="scroll">
+    <div class="input-group">
+      <label class="input-label" for="np-code">Код (автоматически верхний регистр)</label>
+      <input class="tg-input" id="np-code" placeholder="STILL2025" type="text" style="text-transform:uppercase;">
+    </div>
+    <div class="input-group">
+      <label class="input-label" for="np-disc">Скидка (SC)</label>
+      <input class="tg-input" id="np-disc" placeholder="200" type="number" inputmode="numeric">
+    </div>
+    <div class="input-group">
+      <label class="input-label" for="np-uses">Лимит использований (0 = безлимит)</label>
+      <input class="tg-input" id="np-uses" placeholder="0" type="number" inputmode="numeric">
+    </div>
+    <button class="btn btn-blue btn-full" onclick="createPromo()">Создать промокод</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     SCREEN: LOGS
+════════════════════════════════════════════ -->
+<div class="screen" id="s-logs">
+  <div class="header">
+    <button class="back-btn" onclick="back()" aria-label="Назад"><i class="ti ti-arrow-left" aria-hidden="true"></i></button>
+    <span class="header-title">Логи событий</span>
+  </div>
+  <div class="scroll">
+    <div class="card-group" id="logs-list"></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Telegram Web App init ───────────────────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.setHeaderColor('#1c1c1e');
+  tg.setBackgroundColor('#1c1c1e');
+}
+
+// ─── Admin auth ─────────────────────────────────────────
+const ADMIN_IDS = [1729163489, 8799722961];
+const userId = tg?.initDataUnsafe?.user?.id;
+
+if (!userId || !ADMIN_IDS.includes(userId)) {
+  document.body.innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;
+    justify-content:center;height:100vh;background:#1c1c1e;gap:14px;
+    font-family:-apple-system,sans-serif;">
+      <div style="font-size:56px;">⛔</div>
+      <div style="font-size:20px;font-weight:700;color:#fff;">Нет доступа</div>
+      <div style="font-size:14px;color:#8e8e93;">Только для администраторов</div>
+      ${userId ? `<div style="font-size:12px;color:#3a3a3c;margin-top:8px;">ID: ${userId}</div>` : ''}
+    </div>`;
+  throw new Error('Unauthorized: ' + userId);
+}
+
+// ─── State ──────────────────────────────────────────────
+const S = {
+  history: ['home'],
+  coinsAmt: 100,
+  selUserId: null,
+  users: [
+    {id:10001,name:'Алекс Петров',handle:'alex_p',av:'АП',avc:'av-blue',  coins:3420,purchases:12,sales:5, banned:false,joined:'2025-03-12'},
+    {id:10002,name:'Maria K',     handle:'maria_k',av:'МК',avc:'av-purple',coins:880, purchases:4, sales:0, banned:false,joined:'2025-04-01'},
+    {id:10003,name:'Testuser',    handle:'t_user', av:'ТЮ',avc:'av-amber', coins:5100,purchases:22,sales:8, banned:false,joined:'2025-02-20'},
+    {id:10004,name:'BadActor',    handle:'bad999', av:'БА',avc:'av-red',   coins:0,   purchases:0, sales:0, banned:true, joined:'2025-05-10'},
+    {id:10005,name:'Niko Games',  handle:'niko_g', av:'НГ',avc:'av-green', coins:1260,purchases:7, sales:3, banned:false,joined:'2025-06-01'},
+  ],
+  photos: [
+    {id:1,emoji:'🌅',name:'Закат',price:150,date:'2025-06-20'},
+    {id:2,emoji:'🎮',name:'GameArt',price:300,date:'2025-06-22'},
+    {id:3,emoji:'🎨',name:'Арт01',price:200,date:'2025-06-24'},
+  ],
+  promos: [
+    {code:'STILL25', discount:250, maxUses:100,uses:47,active:true},
+    {code:'LAUNCH',  discount:500, maxUses:50, uses:50,active:false},
+    {code:'VIP2025', discount:1000,maxUses:0,  uses:12,active:true},
+    {code:'TEST',    discount:100, maxUses:10, uses:3, active:true},
+  ],
+  logs: [
+    {color:'#ffd60a',action:'Начислено +500 SC',  detail:'uid:10003 · admin', time:'14:32'},
+    {color:'#ff453a',action:'Бан пользователя',    detail:'uid:10004 · admin', time:'13:18'},
+    {color:'#30d158',action:'Промокод создан',     detail:'STILL25 · 250SC',  time:'12:05'},
+    {color:'#bf5af2',action:'Фото загружено',      detail:'photo_06_26.jpg',  time:'11:44'},
+    {color:'#0a84ff',action:'Новый пользователь',  detail:'uid:10005',        time:'10:30'},
+    {color:'#30d158',action:'Продажа контента',    detail:'uid:10001 → 150SC',time:'09:55'},
+    {color:'#0a84ff',action:'Новый пользователь',  detail:'uid:10004',        time:'09:12'},
+    {color:'#ffd60a',action:'Списано −100 SC',     detail:'uid:10002 · admin',time:'08:41'},
+  ],
+};
+
+// ─── Navigation ─────────────────────────────────────────
+function go(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-' + name).classList.add('active');
+  S.history.push(name);
+  onEnter(name);
+}
+function back() {
+  S.history.pop();
+  const prev = S.history[S.history.length - 1] || 'home';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('s-' + prev).classList.add('active');
+  onEnter(prev);
+}
+function onEnter(name) {
+  if (name === 'users')   renderUsers();
+  if (name === 'promos')  renderPromos();
+  if (name === 'logs')    renderLogs();
+  if (name === 'upload')  renderPhotos();
+}
+
+// ─── Toast ──────────────────────────────────────────────
+let toastTimer;
+function toast(msg, ok = true) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (ok ? '' : ' err');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+  if (tg) tg.HapticFeedback.notificationOccurred(ok ? 'success' : 'error');
+}
+
+// ─── Users ──────────────────────────────────────────────
+function renderUsers() {
+  const el = document.getElementById('users-list');
+  el.innerHTML = '';
+  S.users.forEach(u => {
+    const row = document.createElement('div');
+    row.className = 'list-item';
+    row.innerHTML = `
+      <div class="avatar ${u.avc}" style="width:36px;height:36px;font-size:13px;border-radius:10px;">${u.av}</div>
+      <div class="item-body">
+        <div class="item-title">${u.name}</div>
+        <div class="item-sub">${u.coins.toLocaleString('ru')} SC · @${u.handle}</div>
+      </div>
+      ${u.banned ? '<span class="item-badge" style="margin-right:6px;font-size:11px;">бан</span>' : ''}
+      <div class="chevron"><i class="ti ti-chevron-right" aria-hidden="true"></i></div>
+    `;
+    row.onclick = () => openUser(u.id);
+    el.appendChild(row);
+  });
+}
+
+function openUser(id) {
+  const u = S.users.find(x => x.id === id);
+  S.selUserId = id;
+  document.getElementById('ud-title').textContent = u.name;
+  document.getElementById('ud-body').innerHTML = `
+    <div class="user-card">
+      <div class="user-head">
+        <div class="user-av ${u.avc}">${u.av}</div>
+        <div>
+          <div class="u-name">${u.name}</div>
+          <div class="u-handle">@${u.handle} · ID ${u.id}</div>
+        </div>
+        <span class="u-status ${u.banned ? 's-banned' : 's-active'}">${u.banned ? 'Забанен' : 'Активен'}</span>
+      </div>
+      <div class="user-stats">
+        <div class="u-stat"><div class="u-stat-val" style="color:var(--amber);">${u.coins.toLocaleString('ru')}</div><div class="u-stat-lbl">StillCoin</div></div>
+        <div class="u-stat"><div class="u-stat-val">${u.purchases}</div><div class="u-stat-lbl">Покупок</div></div>
+        <div class="u-stat"><div class="u-stat-val">${u.sales}</div><div class="u-stat-lbl">Продаж</div></div>
+      </div>
+      <div class="divider"></div>
+      <div class="big-row"><span class="big-lbl">Дата регистрации</span><span class="big-val">${u.joined}</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-blue" onclick="openCoins(${u.id})"><i class="ti ti-coin" aria-hidden="true"></i> Монеты</button>
+      <button class="btn ${u.banned ? 'btn-green' : 'btn-red'}" onclick="toggleBan(${u.id})">${u.banned ? '✓ Разбанить' : '✕ Забанить'}</button>
+    </div>
+  `;
+  go('userdetail');
+}
+
+function toggleBan(id) {
+  const u = S.users.find(x => x.id === id);
+  u.banned = !u.banned;
+  const txt = u.banned ? '🚫 Забанен: ' : '✅ Разбанен: ';
+  S.logs.unshift({color: u.banned?'#ff453a':'#30d158', action: txt.trim(), detail:`uid:${id} · admin`, time:'сейчас'});
+  document.getElementById('h-banned').textContent = S.users.filter(x=>x.banned).length;
+  toast(txt + u.name, !u.banned);
+  openUser(id);
+}
+
+// ─── Coins ──────────────────────────────────────────────
+function openCoins(id) {
+  const u = S.users.find(x => x.id === id);
+  S.selUserId = id;
+  S.coinsAmt = 100;
+  document.getElementById('coins-for').textContent = u.name;
+  document.getElementById('coins-bal').textContent = u.coins.toLocaleString('ru') + ' SC';
+  updCoinsDisp();
+  go('coins');
+}
+function adjCoins(d) { S.coinsAmt = Math.max(-9999, Math.min(9999, S.coinsAmt + d)); updCoinsDisp(); }
+function setCoins(v) { S.coinsAmt += v; S.coinsAmt = Math.max(-9999, Math.min(9999, S.coinsAmt)); updCoinsDisp(); }
+function updCoinsDisp() {
+  const el = document.getElementById('coins-disp');
+  el.textContent = (S.coinsAmt > 0 ? '+' : '') + S.coinsAmt;
+  el.style.color = S.coinsAmt >= 0 ? 'var(--amber)' : 'var(--red)';
+}
+function applyCoins() {
+  const u = S.users.find(x => x.id === S.selUserId);
+  u.coins = Math.max(0, u.coins + S.coinsAmt);
+  const sign = S.coinsAmt > 0 ? '+' : '';
+  S.logs.unshift({color:'#ffd60a', action:`${sign}${S.coinsAmt} SC`, detail:`uid:${u.id} · admin`, time:'сейчас'});
+  toast(`${sign}${S.coinsAmt} SC → ${u.name}`);
+  back(); openUser(u.id);
+}
+
+// ─── Upload ─────────────────────────────────────────────
+let uploadBusy = false;
+function doUpload() {
+  if (uploadBusy) return;
+  uploadBusy = true;
+  const icon  = document.getElementById('uz-icon');
+  const title = document.getElementById('uz-title');
+  const sub   = document.getElementById('uz-sub');
+  icon.textContent = '⏳'; title.textContent = 'Загрузка...'; sub.textContent = 'Подождите';
+  setTimeout(() => {
+    const cap   = document.getElementById('ph-caption').value.trim() || 'Новое фото';
+    const price = parseInt(document.getElementById('ph-price').value) || 100;
+    const emj   = ['🖼','🌃','🎭','🏞','🌺','🎪','🌊','🦋','🦁','🚀'][Math.floor(Math.random()*10)];
+    S.photos.unshift({id:Date.now(), emoji:emj, name:cap, price, date:'2026-06-26'});
+    S.logs.unshift({color:'#bf5af2', action:'Фото загружено', detail:cap, time:'сейчас'});
+    icon.textContent = '✅'; title.textContent = 'Готово!'; sub.textContent = cap + ' · ' + price + ' SC';
+    renderPhotos();
+    toast('Загружено: ' + cap);
+    document.getElementById('ph-caption').value = '';
+    document.getElementById('ph-price').value = '';
+    setTimeout(() => {
+      icon.textContent='📤'; title.textContent='Загрузить фото'; sub.textContent='Нажми чтобы выбрать';
+      uploadBusy = false;
+    }, 2000);
+  }, 1100);
+}
+function renderPhotos() {
+  const g = document.getElementById('photo-grid');
+  g.innerHTML = '';
+  S.photos.forEach(p => {
+    const d = document.createElement('div');
+    d.className = 'photo-thumb';
+    d.innerHTML = `<div class="photo-emoji">${p.emoji}</div><div class="photo-meta">${p.name} · ${p.price} SC</div>`;
+    g.appendChild(d);
+  });
+}
+
+// ─── Promos ─────────────────────────────────────────────
+function renderPromos() {
+  const el = document.getElementById('promos-list');
+  el.innerHTML = '';
+  S.promos.forEach(p => {
+    const lim = p.maxUses === 0 ? `${p.uses}/∞` : `${p.uses}/${p.maxUses}`;
+    const row = document.createElement('div');
+    row.className = 'promo-item';
+    row.innerHTML = `
+      <div>
+        <div class="promo-code" style="color:${p.active?'var(--text)':'var(--muted)'}">${p.code}</div>
+        <div class="promo-info">${p.active?'✅ Активен':'❌ Закончен'} · ${lim} исп.</div>
+      </div>
+      <div>
+        <div class="promo-disc">${p.discount} SC</div>
+        <div class="promo-uses">скидка</div>
+      </div>
+    `;
+    el.appendChild(row);
+  });
+  document.getElementById('h-promo-cnt').textContent = S.promos.filter(p=>p.active).length;
+}
+function createPromo() {
+  const code = document.getElementById('np-code').value.toUpperCase().trim();
+  const disc = parseInt(document.getElementById('np-disc').value) || 0;
+  const uses = parseInt(document.getElementById('np-uses').value) || 0;
+  if (code.length < 2)  { toast('Введи код промокода', false); return; }
+  if (disc <= 0)        { toast('Введи сумму скидки', false); return; }
+  if (S.promos.find(p => p.code === code)) { toast('Промокод уже существует', false); return; }
+  S.promos.unshift({code, discount:disc, maxUses:uses, uses:0, active:true});
+  S.logs.unshift({color:'#30d158', action:'Промокод создан', detail:`${code} · ${disc}SC`, time:'сейчас'});
+  document.getElementById('np-code').value = '';
+  document.getElementById('np-disc').value = '';
+  document.getElementById('np-uses').value = '';
+  toast('Промокод ' + code + ' создан!');
+  back();
+}
+
+// ─── Logs ───────────────────────────────────────────────
+function renderLogs() {
+  const el = document.getElementById('logs-list');
+  el.innerHTML = '';
+  S.logs.slice(0, 20).forEach(l => {
+    const row = document.createElement('div');
+    row.className = 'log-item';
+    row.innerHTML = `
+      <div class="log-dot" style="background:${l.color};"></div>
+      <div class="log-body">
+        <div class="log-action">${l.action}</div>
+        <div class="log-detail">${l.detail}</div>
+      </div>
+      <div class="log-time">${l.time}</div>
+    `;
+    el.appendChild(row);
+  });
+}
+
+// ─── Start ──────────────────────────────────────────────
+renderPhotos();
+</script>
+</body>
+</html>
